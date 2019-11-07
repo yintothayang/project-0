@@ -1,0 +1,25 @@
+# Credentials
+creds.json
+
+# package directories
+node_modules
+jspm_packages
+
+# Serverless directories
+.serverless
+
+# dist
+test/dist
+/dist
+
+# code coverage
+.nyc_output
+/coverage
+
+# misc
+.DS_Store
+
+# editor
+.vscode
+
+images/
