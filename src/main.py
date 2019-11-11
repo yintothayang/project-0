@@ -20,13 +20,16 @@ CLASS_NAMES = np.array([item.name for item in data_dir.glob('*')])
 print(CLASS_NAMES)
 
 lol = list(data_dir.glob('lol/*'))
-(IMG_WIDTH, IMG_HEIGHT) = Image.open(str(lol[0])).size
+(ACTUAL_IMG_WIDTH, ACTUAL_IMG_HEIGHT) = Image.open(str(lol[0])).size
 
-print(IMG_WIDTH, IMG_HEIGHT)
+print(ACTUAL_IMG_WIDTH, ACTUAL_IMG_HEIGHT)
+
+IMG_WIDTH = int(ACTUAL_IMG_WIDTH / 8)
+IMG_HEIGHT = int(ACTUAL_IMG_HEIGHT / 8)
 
 image_generator = tf.keras.preprocessing.image.ImageDataGenerator(rescale=1./255,  validation_split=0.2)
 
-EPOCHS = 5
+EPOCHS = 10
 BATCH_SIZE = 32
 STEPS_PER_EPOCH = np.ceil(image_count/BATCH_SIZE)
 train_data_gen = image_generator.flow_from_directory(directory=str(data_dir),
@@ -55,11 +58,24 @@ def show_batch(image_batch, label_batch):
       plt.axis('off')
   plt.show()
 
-image_batch, label_batch = next(val_data_gen)
+image_batch, label_batch = next(train_data_gen)
+# print(image_batch)
+# print(label_batch)
+# This function will plot images in the form of a grid with 1 row and 5 columns where images are placed in each column.
+def plotImages(images_arr):
+    fig, axes = plt.subplots(1, 5, figsize=(20,20))
+    axes = axes.flatten()
+    for img, ax in zip( images_arr, axes):
+        ax.imshow(img)
+        ax.axis('off')
+    plt.tight_layout()
+    plt.show()
+
+# plotImages(image_batch[:5])
 # show_batch(image_batch, label_batch)
 
 model = models.Sequential([
-  layers.Conv2D(16, 3, padding='same', activation='relu', input_shape=(IMG_HEIGHT, IMG_WIDTH ,3)),
+  layers.Conv2D(16, 3, padding='same', activation='relu', input_shape=(IMG_HEIGHT, IMG_WIDTH,3)),
   layers.MaxPooling2D(),
   layers.Conv2D(32, 3, padding='same', activation='relu'),
   layers.MaxPooling2D(),
@@ -71,17 +87,9 @@ model = models.Sequential([
 ])
 
 
-
-# model.add(layers.Flatten())
-# model.add(layers.Dense(64, activation='relu'))
-# model.add(layers.Dense(10, activation='softmax'))
-
-
 model.compile(optimizer='adam',
-              # loss='sparse_categorical_crossentropy',
               loss='binary_crossentropy',
               metrics=['accuracy'])
-
 
 model.summary()
 
@@ -98,6 +106,29 @@ history = model.fit_generator(
 )
 
 
+# acc = history.history['accuracy']
+# val_acc = history.history['val_accuracy']
+
+# loss = history.history['loss']
+# val_loss = history.history['val_loss']
+
+# epochs_range = range(EPOCHS)
+
+# plt.figure(figsize=(8, 8))
+# plt.subplot(1, 2, 1)
+# plt.plot(epochs_range, acc, label='Training Accuracy')
+# plt.plot(epochs_range, val_acc, label='Validation Accuracy')
+# plt.legend(loc='lower right')
+# plt.title('Training and Validation Accuracy')
+
+# plt.subplot(1, 2, 2)
+# plt.plot(epochs_range, loss, label='Training Loss')
+# plt.plot(epochs_range, val_loss, label='Validation Loss')
+# plt.legend(loc='upper right')
+# plt.title('Training and Validation Loss')
+# plt.show()
+
+
 # plt.plot(history.history['accuracy'], label='accuracy')
 # plt.plot(history.history['val_accuracy'], label = 'val_accuracy')
 # plt.xlabel('Epoch')
@@ -106,3 +137,5 @@ history = model.fit_generator(
 # plt.legend(loc='lower right')
 
 # test_loss, test_acc = model.evaluate(test_images,  test_labels, verbose=2)
+
+# plt.show()
