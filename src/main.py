@@ -30,7 +30,7 @@ IMG_HEIGHT = int(ACTUAL_IMG_HEIGHT / 8)
 image_generator = tf.keras.preprocessing.image.ImageDataGenerator(rescale=1./255,  validation_split=0.2)
 
 EPOCHS = 10
-BATCH_SIZE = 32
+BATCH_SIZE = 128
 STEPS_PER_EPOCH = np.ceil(image_count/BATCH_SIZE)
 train_data_gen = image_generator.flow_from_directory(directory=str(data_dir),
                                                      batch_size=BATCH_SIZE,
@@ -106,8 +106,11 @@ history = model.fit_generator(
 )
 
 
-# acc = history.history['accuracy']
-# val_acc = history.history['val_accuracy']
+acc = history.history['accuracy']
+val_acc = history.history['val_accuracy']
+
+print(acc)
+print(val_acc)
 
 # loss = history.history['loss']
 # val_loss = history.history['val_loss']
