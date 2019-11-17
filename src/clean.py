@@ -1,4 +1,4 @@
-import PIL
+from PIL import Image
 import pathlib
 import os
 
@@ -9,7 +9,8 @@ for filename in image_paths:
   try:
       img = Image.open(filename)
       img.verify()
-  except (IOError, SyntaxError) as e:
+      print("verified")
+  except (IOError, SyntaxError, OSError) as e:
       print('Bad file:', filename)
       os.remove(filename)
       print("removed")

@@ -1,46 +1,59 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 import tensorflow as tf
+keras = tf.keras
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
-from PIL import Image
+from PIL import Image, ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 from tensorflow.keras import datasets, layers, models
+import tensorflow_hub as hub
 import numpy as np
 import matplotlib.pyplot as plt
 import pathlib
 import sys
 import os
 
-data_dir = pathlib.Path('../images')
-image_count = len(list(data_dir.glob('*/*.jpg')))
-
-print(image_count)
-
-CLASS_NAMES = np.array([item.name for item in data_dir.glob('*')])
-
-print(CLASS_NAMES)
-
-lol = list(data_dir.glob('World_of_Warcraft/*'))
-(ACTUAL_IMG_WIDTH, ACTUAL_IMG_HEIGHT) = Image.open(str(lol[0])).size
-
-
-IMG_WIDTH = int(ACTUAL_IMG_WIDTH / 8)
-IMG_HEIGHT = int(ACTUAL_IMG_HEIGHT / 8)
-
-image_generator = tf.keras.preprocessing.image.ImageDataGenerator(rescale=1./255,  validation_split=0.2)
-
-EPOCHS = 1
+EPOCHS = 2
 BATCH_SIZE = 32
-STEPS_PER_EPOCH = np.ceil(image_count/BATCH_SIZE)
-train_data_gen = image_generator.flow_from_directory(directory=str(data_dir),
-                                                     batch_size=BATCH_SIZE,
-                                                     shuffle=True,
-                                                     target_size=(IMG_HEIGHT, IMG_WIDTH),
-                                                     subset='training',
-                                                     class_mode='binary',
-                                                     classes = list(CLASS_NAMES))
+STEPS_PER_EPOCH
+IMG_WIDTH = 160
+IMG_HEIGHT = 160
 
-val_data_gen = image_generator.flow_from_directory(directory=str(data_dir),
+class CollectBatchStats(tf.keras.callbacks.Callback):
+  def __init__(self):
+    self.batch_losses = []
+    self.batch_acc = []
+
+  def on_train_batch_end(self, batch, logs=None):
+    self.batch_losses.append(logs['loss'])
+    self.batch_acc.append(logs['acc'])
+    self.model.reset_metrics()
+
+
+def load():
+  data_dir = pathlib.Path('../images')
+  image_count = len(list(data_dir.glob('*/*.jpg')))
+  # print("total images: ", image_count)
+  CLASS_NAMES = np.array([item.name for item in data_dir.glob('*')])
+
+  # print(CLASS_NAMES)
+
+  # lol = list(data_dir.glob('World_of_Warcraft/*'))
+  # (ACTUAL_IMG_WIDTH, ACTUAL_IMG_HEIGHT) = Image.open(str(lol[0])).size
+  # IMG_WIDTH = int(ACTUAL_IMG_WIDTH / 8)
+  # IMG_HEIGHT = int(ACTUAL_IMG_HEIGHT / 8)
+
+  image_generator = tf.keras.preprocessing.image.ImageDataGenerator(rescale=1./255,  validation_split=0.2)
+  train_data_gen = image_generator.flow_from_directory(directory=str(data_dir),
+                                                       batch_size=BATCH_SIZE,
+                                                       shuffle=True,
+                                                       target_size=(IMG_HEIGHT, IMG_WIDTH),
+                                                       subset='training',
+                                                       class_mode='binary',
+                                                       classes = list(CLASS_NAMES))
+
+  validate_data_gen = image_generator.flow_from_directory(directory=str(data_dir),
                                                      batch_size=BATCH_SIZE,
                                                      shuffle=True,
                                                      target_size=(IMG_HEIGHT, IMG_WIDTH),
@@ -48,99 +61,78 @@ val_data_gen = image_generator.flow_from_directory(directory=str(data_dir),
                                                      class_mode='binary',
                                                      classes = list(CLASS_NAMES))
 
+  return (train_data_gen, validate_data_gen)
 
-def show_batch(image_batch, label_batch):
-  plt.figure(figsize=(10,10))
-  for n in range(25):
-      ax = plt.subplot(5,5,n+1)
-      plt.imshow(image_batch[n])
-      plt.title(CLASS_NAMES[label_batch[n]==1][0].title())
-      plt.axis('off')
+def verify(image_batch, label_batch):
+  plt.figure(figsize=(IMG_WIDTH, IMG_HEIGHT))
+  plt.subplots_adjust(hspace=0.5)
+  for n in range(30):
+    plt.subplot(6,5,n+1)
+    plt.imshow(image_batch[n])
+    plt.title(CLASS_NAMES[int(label_batch[n])])
+    plt.axis('off')
   plt.show()
 
-image_batch, label_batch = next(train_data_gen)
+
+def train(train_data_gen, validate_data_gen):
+
+  IMG_SHAPE = (160, 160, 3)
+
+  # Create the base model from the pre-trained model MobileNet V2
+  base_model = tf.keras.applications.MobileNetV2(input_shape=IMG_SHAPE,
+                                                 include_top=False,
+                                                 weights='imagenet')
+
+  image_batch, label_batch = next(train_data_gen)
+  feature_batch = base_model(image_batch)
+  # print(feature_batch.shape)
+
+  base_model.trainable = False
+
+  # base_model.summary()
 
 
-# print(image_batch)
-# print(label_batch)
-# This function will plot images in the form of a grid with 1 row and 5 columns where images are placed in each column.
-def plotImages(images_arr):
-    fig, axes = plt.subplots(1, 5, figsize=(20,20))
-    axes = axes.flatten()
-    for img, ax in zip( images_arr, axes):
-        ax.imshow(img)
-        ax.axis('off')
-    plt.tight_layout()
-    plt.show()
-
-# plotImages(image_batch[:5])
-# show_batch(image_batch, label_batch)
-
-model = models.Sequential([
-  layers.Conv2D(16, 3, padding='same', activation='relu', input_shape=(IMG_HEIGHT, IMG_WIDTH,3)),
-  layers.MaxPooling2D(),
-  layers.Conv2D(32, 3, padding='same', activation='relu'),
-  layers.MaxPooling2D(),
-  layers.Conv2D(64, 3, padding='same', activation='relu'),
-  layers.MaxPooling2D(),
-  layers.Flatten(),
-  layers.Dense(512, activation='relu'),
-  layers.Dense(1, activation='sigmoid')
-])
+  global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
+  feature_batch_average = global_average_layer(feature_batch)
+  print(feature_batch_average.shape)
 
 
-model.compile(optimizer='adam',
-              loss='binary_crossentropy',
-              metrics=['accuracy'])
-
-model.summary()
+  prediction_layer = keras.layers.Dense(1)
+  prediction_batch = prediction_layer(feature_batch_average)
+  print(prediction_batch.shape)
 
 
-total_train = 9312
-total_val = 2327
-
-history = model.fit_generator(
-    train_data_gen,
-    steps_per_epoch=total_train,
-    epochs=EPOCHS,
-    validation_data=val_data_gen,
-    validation_steps=total_val
-)
+  model = tf.keras.Sequential([
+    base_model,
+    global_average_layer,
+    prediction_layer
+  ])
 
 
-acc = history.history['accuracy']
-val_acc = history.history['val_accuracy']
+  base_learning_rate = 0.0001
+  model.compile(optimizer=tf.keras.optimizers.RMSprop(lr=base_learning_rate),
+                loss='binary_crossentropy',
+                metrics=['accuracy'])
 
-print(acc)
-print(val_acc)
+  model.summary()
 
-loss = history.history['loss']
-val_loss = history.history['val_loss']
+  print(len(model.trainable_variables))
 
-epochs_range = range(EPOCHS)
+  # loss0,accuracy0 = model.evaluate(validate_data_gen, steps = 10)
 
-plt.figure(figsize=(8, 8))
-plt.subplot(1, 2, 1)
-plt.plot(epochs_range, acc, label='Training Accuracy')
-plt.plot(epochs_range, val_acc, label='Validation Accuracy')
-plt.legend(loc='lower right')
-plt.title('Training and Validation Accuracy')
-
-plt.subplot(1, 2, 2)
-plt.plot(epochs_range, loss, label='Training Loss')
-plt.plot(epochs_range, val_loss, label='Validation Loss')
-plt.legend(loc='upper right')
-plt.title('Training and Validation Loss')
-plt.show()
+  history = model.fit(train_data_gen,
+                      epochs=10,
+                      validation_data=validate_data_gen)
 
 
-# plt.plot(history.history['accuracy'], label='accuracy')
-# plt.plot(history.history['val_accuracy'], label = 'val_accuracy')
-# plt.xlabel('Epoch')
-# plt.ylabel('Accuracy')
-# plt.ylim([0.5, 1])
-# plt.legend(loc='lower right')
+def main():
+  (train_data_gen, validate_data_gen) = load()
 
-# test_loss, test_acc = model.evaluate(test_images,  test_labels, verbose=2)
+  # image_batch, label_batch = next(train_data_gen)
+  # print(image_batch.shape)
+  # verify(image_batch, label_batch)
 
-# plt.show()
+  train(train_data_gen, validate_data_gen)
+
+
+main()
