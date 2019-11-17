@@ -2,7 +2,7 @@ const fs = require("fs")
 const request = require("request")
 const puppeteer = require('puppeteer')
 const uuidv4 = require('uuid/v4')
-const { spawnSync} = require('child_process')
+const { execSync} = require('child_process')
 
 
 const TWTICH_DIRECTORY_URL = 'https://www.twitch.tv/directory/'
@@ -80,7 +80,7 @@ const collectGame = async(game, page)=>{
   for(let i=0; i<image_urls.length; i++){
     let url = image_urls[i]
     let file_name = game.dir + "/" + uuidv4() + url.replaceAll("/", '+')
-    const child = spawnSync(`wget ${url}`, ['-O', file_name])
+    const child = execSync(`wget ${url} -O ${file_name}`)
   }
 
   // image_urls.forEach(url => {
@@ -118,7 +118,7 @@ const main = async()=>{
     }
 
     await Promise.all(promises)
-    // await browser.close()
+    await browser.close()
     console.log("collection complete")
   } catch(e){
     console.log("error: ", e)
