@@ -3,6 +3,9 @@ const request = require("request")
 const puppeteer = require('puppeteer')
 const uuidv4 = require('uuid/v4')
 
+
+const TWTICH_DIRECTORY_URL = 'https://www.twitch.tv/directory/'
+const TWTICH_BASE_URL = 'https://www.twitch.tv/directory/game/'
 const LOL_TWITCH = 'https://www.twitch.tv/directory/game/League%20of%20Legends'
 const MTGA_TWITCH = 'https://www.twitch.tv/directory/game/Magic%3A%20The%20Gathering'
 const SMASH_TWITCH = 'https://www.twitch.tv/directory/game/Super%20Smash%20Bros.%20Ultimate'
@@ -11,7 +14,7 @@ const MTGA_YOUTUBE = 'UCE04gbPEl9kD5IHTBMmK0yw'
 const LOL_YOUTUBE =  'UCZtmNrG53nmbq-Ww2VJrxEQ'
 
 const puppeteer_config = {
-  headless: false,
+  headless: true,
   defaultViewport: {
     width: 1800,
     height: 1000
@@ -20,15 +23,41 @@ const puppeteer_config = {
 }
 
 
-
-const collectGame = async(url, dir)=>{
+const getGameList = async(total_games = 10) => {
   const browser = await puppeteer.launch(puppeteer_config)
   const page = await browser.newPage()
-  // await page.setViewport({ width: 1900, height: 800 })
-
-  await page.goto(url)
+  await page.goto("https://www.twitch.tv/directory")
   await page.waitForSelector('.tw-tower')
 
+  let game_urls = await page.evaluate(()=>{
+    let game_urls = []
+    let children = document.querySelector('.tw-tower').children
+    for (var i = 0; i < children.length; i++) {
+      let child = children[i]
+      if(child.querySelector('.tw-box-art-card__link')){
+        game_urls.push(child.querySelector('.tw-box-art-card__link').href)
+      }
+    }
+    return game_urls
+  })
+
+  return game_urls.map(url => {
+    let decoded = decodeURI(url).replaceAll("%3A", ":").replaceAll("%2F", "/").replaceAll("%26", "and")
+    let name = decoded.split("https://www.twitch.tv/directory/game/")[1]
+    return {
+      url,
+      name,
+      dir:  "./images/" + name.replaceAll(" ", "_").replaceAll("/", "+"),
+    }
+  }).filter(game =>{
+    return game.name != "Just Chatting"
+  }).slice(0, total_games)
+}
+
+
+const collectGame = async(game, page)=>{
+  await page.goto(game.url)
+  await page.waitForSelector('.tw-tower')
 
   let image_urls = await page.evaluate(()=>{
     let image_urls = []
@@ -42,28 +71,21 @@ const collectGame = async(url, dir)=>{
     return image_urls
   })
 
-  await browser.close()
-  console.log(image_urls)
+
+  if (!fs.existsSync(game.dir)){
+    fs.mkdirSync(game.dir)
+  }
 
   var find = '/'
   var re = new RegExp(find, 'g')
   image_urls.forEach(url => {
-    download(url, "./images/twitch/" + dir + "/" + uuidv4() + url.replace(re, '+'), function() {
-      console.log("Image downloaded");
+    download(url, game.dir + "/" + uuidv4() + url.replace(re, '+'), function() {
+
     });
   })
-}
 
-
-const main = async()=>{
-  console.log("start collect")
-  let promises = [
-    collectGame(LOL_TWITCH, 'lol'),
-    collectGame(MTGA_TWITCH, 'mtga'),
-    collectGame(SMASH_TWITCH, 'smash')
-  ]
-  await Promise.all(promises)
-  console.log("end collect")
+  console.log("1")
+  return
 }
 
 
@@ -71,8 +93,29 @@ function download(uri, filename, callback) {
   request.head(uri, function(err, res, body) {
     request(uri)
     .pipe(fs.createWriteStream(filename))
-    .on("close", callback);
+    .on("close", callback)
  });
+}
+
+
+String.prototype.replaceAll = function(search, replacement) {
+    var target = this
+    return target.split(search).join(replacement)
+};
+
+const main = async()=>{
+  const browser = await puppeteer.launch(puppeteer_config)
+  const games = await getGameList()
+
+  let promises = []
+  for(let i=0; i<games.length; i++){
+    let page = await browser.newPage()
+    promises.push(collectGame(games[i], page))
+  }
+
+  await Promise.all(promises)
+  await browser.close()
+  console.log("collection complete")
 }
 
 
