@@ -8,9 +8,10 @@ from tensorflow.keras import datasets, layers, models
 import numpy as np
 import matplotlib.pyplot as plt
 import pathlib
+import sys
+import os
 
-
-data_dir = pathlib.Path('../images/twitch')
+data_dir = pathlib.Path('../images')
 image_count = len(list(data_dir.glob('*/*.jpg')))
 
 print(image_count)
@@ -19,17 +20,16 @@ CLASS_NAMES = np.array([item.name for item in data_dir.glob('*')])
 
 print(CLASS_NAMES)
 
-lol = list(data_dir.glob('lol/*'))
+lol = list(data_dir.glob('World_of_Warcraft/*'))
 (ACTUAL_IMG_WIDTH, ACTUAL_IMG_HEIGHT) = Image.open(str(lol[0])).size
 
-print(ACTUAL_IMG_WIDTH, ACTUAL_IMG_HEIGHT)
 
 IMG_WIDTH = int(ACTUAL_IMG_WIDTH / 8)
 IMG_HEIGHT = int(ACTUAL_IMG_HEIGHT / 8)
 
 image_generator = tf.keras.preprocessing.image.ImageDataGenerator(rescale=1./255,  validation_split=0.2)
 
-EPOCHS = 10
+EPOCHS = 1
 BATCH_SIZE = 32
 STEPS_PER_EPOCH = np.ceil(image_count/BATCH_SIZE)
 train_data_gen = image_generator.flow_from_directory(directory=str(data_dir),
@@ -58,7 +58,23 @@ def show_batch(image_batch, label_batch):
       plt.axis('off')
   plt.show()
 
-image_batch, label_batch = next(train_data_gen)
+try:
+  image_batch, label_batch = next(train_data_gen)
+except Exception as e:
+  print("exception", e)
+  path = str(e).split('file ')[1][1:-1]
+  print(path)
+
+  try:
+    os.remove(path)
+  except Exception as e:
+    print("another: ", e)
+    # sys.exit("I'm dead")
+    # print("path: ", path)
+  # [1:-1]
+
+
+
 # print(image_batch)
 # print(label_batch)
 # This function will plot images in the form of a grid with 1 row and 5 columns where images are placed in each column.
