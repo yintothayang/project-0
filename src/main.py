@@ -58,21 +58,7 @@ def show_batch(image_batch, label_batch):
       plt.axis('off')
   plt.show()
 
-try:
-  image_batch, label_batch = next(train_data_gen)
-except Exception as e:
-  print("exception", e)
-  path = str(e).split('file ')[1][1:-1]
-  print(path)
-
-  try:
-    os.remove(path)
-  except Exception as e:
-    print("another: ", e)
-    # sys.exit("I'm dead")
-    # print("path: ", path)
-  # [1:-1]
-
+image_batch, label_batch = next(train_data_gen)
 
 
 # print(image_batch)
