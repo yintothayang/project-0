@@ -2,6 +2,7 @@ const fs = require("fs")
 const request = require("request")
 const puppeteer = require('puppeteer')
 const uuidv4 = require('uuid/v4')
+const { spawnSync} = require('child_process')
 
 
 const TWTICH_DIRECTORY_URL = 'https://www.twitch.tv/directory/'
@@ -16,10 +17,10 @@ const LOL_YOUTUBE =  'UCZtmNrG53nmbq-Ww2VJrxEQ'
 const puppeteer_config = {
   headless: true,
   defaultViewport: {
-    width: 1800,
-    height: 1000
+    width: 4800,
+    height: 3000
   },
-  args: ['--start-fullscreen']
+  // args: ['--start-fullscreen']
 }
 
 
@@ -71,20 +72,22 @@ const collectGame = async(game, page)=>{
     return image_urls
   })
 
-
   if (!fs.existsSync(game.dir)){
     fs.mkdirSync(game.dir)
   }
 
-  var find = '/'
-  var re = new RegExp(find, 'g')
-  image_urls.forEach(url => {
-    download(url, game.dir + "/" + uuidv4() + url.replace(re, '+'), function() {
+  console.log("total image_urls: ", image_urls.length)
+  for(let i=0; i<image_urls.length; i++){
+    let url = image_urls[i]
+    let file_name = game.dir + "/" + uuidv4() + url.replaceAll("/", '+')
+    const child = spawnSync(`wget ${url}`, ['-O', file_name])
+  }
 
-    });
-  })
+  // image_urls.forEach(url => {
+  //   download(url, game.dir + "/" + uuidv4() + url.replace(re, '+'), function() {
+  //   })
+  // })
 
-  console.log("1")
   return
 }
 
@@ -104,18 +107,22 @@ String.prototype.replaceAll = function(search, replacement) {
 };
 
 const main = async()=>{
-  const browser = await puppeteer.launch(puppeteer_config)
-  const games = await getGameList()
+  try {
+    const browser = await puppeteer.launch(puppeteer_config)
+    const games = await getGameList(10)
 
-  let promises = []
-  for(let i=0; i<games.length; i++){
-    let page = await browser.newPage()
-    promises.push(collectGame(games[i], page))
+    let promises = []
+    for(let i=0; i<games.length; i++){
+      let page = await browser.newPage()
+      promises.push(collectGame(games[i], page))
+    }
+
+    await Promise.all(promises)
+    // await browser.close()
+    console.log("collection complete")
+  } catch(e){
+    console.log("error: ", e)
   }
-
-  await Promise.all(promises)
-  await browser.close()
-  console.log("collection complete")
 }
 
 

@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "puppeteer": "^2.0.0",
+    "request": "^2.88.0",
     "uuid": "^3.3.3"
   }
 }
