@@ -82,7 +82,7 @@ def train(train_data_gen, validate_data_gen):
   model.add(layers.Conv2D(64, (3, 3), activation='relu'))
   model.add(layers.Flatten())
   model.add(layers.Dense(64, activation='relu'))
-  model.add(layers.Dense(len(CLASS_NAMES), activation='softmax'))
+  model.add(layers.Dense(15, activation='softmax'))
 
   model.compile(optimizer='adam',
                 loss='sparse_categorical_crossentropy',
