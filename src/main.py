@@ -7,7 +7,6 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 from PIL import Image, ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 from tensorflow.keras import datasets, layers, models
-import tensorflow_hub as hub
 import numpy as np
 import matplotlib.pyplot as plt
 import pathlib
