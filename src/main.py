@@ -13,7 +13,6 @@ import pathlib
 import sys
 import os
 
-EPOCHS = 10
 BATCH_SIZE = 32
 STEPS_PER_EPOCH = 32
 IMG_WIDTH = 440
@@ -88,31 +87,23 @@ def train(train_data_gen, validate_data_gen):
                 loss='sparse_categorical_crossentropy',
                 metrics=['accuracy'])
 
-  history = model.fit(train_data_gen,
-                      epochs=5,
-                      validation_data=validate_data_gen)
+  model.fit(train_data_gen,
+            epochs=10,
+            validation_data=validate_data_gen)
 
-  plt.plot(history.history['accuracy'], label='accuracy')
-  plt.plot(history.history['val_accuracy'], label = 'val_accuracy')
-  plt.xlabel('Epoch')
-  plt.ylabel('Accuracy')
-  plt.ylim([0.5, 1])
-  plt.legend(loc='lower right')
-  plt.show()
-
-  # test_loss, test_acc = model.evaluate(test_images,  test_labels, verbose=2)
+  model.save('dope.h5')
 
 
 def main():
   (train_data_gen, validate_data_gen) = load()
 
-  image_batch, label_batch = next(train_data_gen)
-
-  labels_by_key = {v: k for k, v in train_data_gen.class_indices.items()}
-
+  # image_batch, label_batch = next(train_data_gen)
+  # labels_by_key = {v: k for k, v in train_data_gen.class_indices.items()}
   # print(image_batch.shape)
-  verify(image_batch, label_batch, labels_by_key)
+  # verify(image_batch, label_batch, labels_by_key)
   # print(len(train_data_gen.filepaths))
+
+
   train(train_data_gen, validate_data_gen)
 
 

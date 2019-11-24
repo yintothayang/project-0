@@ -1,3 +1,6 @@
 Pillow
 matplotlib
 SciPy
+pyyaml
+h5py
+tensorflow
