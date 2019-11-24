@@ -88,7 +88,7 @@ def train(train_data_gen, validate_data_gen):
                 metrics=['accuracy'])
 
   model.fit(train_data_gen,
-            epochs=10,
+            epochs=5,
             validation_data=validate_data_gen)
 
   model.save('dope.h5')
