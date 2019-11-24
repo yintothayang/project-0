@@ -33,7 +33,7 @@ class CollectBatchStats(tf.keras.callbacks.Callback):
 
 
 def load():
-  data_dir = pathlib.Path('../images/test')
+  data_dir = pathlib.Path('../images')
   image_count = len(list(data_dir.glob('*/*.jpg')))
   # print("total images: ", image_count)
   CLASS_NAMES = np.array([item.name for item in data_dir.glob('*')])
@@ -54,11 +54,11 @@ def load():
 
 
   validate_data_gen = image_generator.flow_from_directory(directory=str(data_dir),
-                                                     batch_size=BATCH_SIZE,
-                                                     shuffle=True,
-                                                     target_size=(IMG_HEIGHT, IMG_WIDTH),
-                                                     subset='validation',
-                                                     class_mode='binary')
+                                                          batch_size=BATCH_SIZE,
+                                                          shuffle=True,
+                                                          target_size=(IMG_HEIGHT, IMG_WIDTH),
+                                                          subset='validation',
+                                                          class_mode='binary')
 
 
   return (train_data_gen, validate_data_gen)
@@ -83,7 +83,7 @@ def train(train_data_gen, validate_data_gen):
   model.add(layers.Conv2D(64, (3, 3), activation='relu'))
   model.add(layers.Flatten())
   model.add(layers.Dense(64, activation='relu'))
-  model.add(layers.Dense(4, activation='softmax'))
+  model.add(layers.Dense(len(CLASS_NAMES), activation='softmax'))
 
   model.compile(optimizer='adam',
                 loss='sparse_categorical_crossentropy',
