@@ -21,3 +21,5 @@ test/dist
 
 # editor
 .vscode
+
+*.h5
